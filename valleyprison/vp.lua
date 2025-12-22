@@ -628,7 +628,7 @@ local versionText = Instance.new("TextLabel")
 versionText.Size = UDim2.new(0, 100, 0, 12)
 versionText.Position = UDim2.new(0, 46, 0, 25)
 versionText.BackgroundTransparency = 1
-versionText.Text = "v7.2 by Mishka"
+versionText.Text = "v1 by Mishka"
 versionText.TextColor3 = C.textDim
 versionText.TextSize = 9
 versionText.Font = Enum.Font.Gotham
@@ -1995,7 +1995,7 @@ local credVer = Instance.new("TextLabel", credCard)
 credVer.Size = UDim2.new(1, 0, 0, 12)
 credVer.Position = UDim2.new(0, 0, 0, 78)
 credVer.BackgroundTransparency = 1
-credVer.Text = "v7.2 Premium"
+credVer.Text = "v1"
 credVer.TextColor3 = C.textDim
 credVer.TextSize = 9
 credVer.Font = Enum.Font.GothamSemibold
@@ -2095,4 +2095,4 @@ task.defer(function()
 	end
 end)
 
-print("PHANTOM v7.2 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
+print("PHANTOM v1 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
