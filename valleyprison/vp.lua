@@ -4,11 +4,14 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 if _G.PhantomGui then _G.PhantomGui:Destroy() end
 
 local connections = {}
+local originalCameraShake = nil
+local cameraShaker = nil
 
 local LOCATIONS = {
 	{name = "Gun Place", x = 192.16, y = 23.24, z = -212.87, autoGrab = true},
@@ -42,7 +45,6 @@ local TEAM_COLORS = {
 }
 
 local TARGET_TEAMS = {"Minimum Security", "Medium Security", "Maximum Security", "Escapee", "State Police", "Department of Corrections"}
-
 local PRISONER_TEAMS = {"Minimum Security", "Medium Security", "Maximum Security", "Escapee"}
 local COP_TEAMS = {"State Police", "Department of Corrections"}
 
@@ -53,8 +55,8 @@ local Settings = {
 	bhop = false, infJump = false, infStamina = false, fly = false, noclip = false, flySpeed = 50, jumpPower = 50, walkSpeed = 16, cframeWalk = false, cframeSpeed = 1,
 	noPepper = false, antiCuff = false, noStun = false, spinbot = false, spinSpeed = 10, desync = false,
 	infZoom = false, autoPickup = false, fullBright = false, noFog = false, fov = 70,
-	noRecoil = false, noSpread = false, recoilAmount = 0, spreadAmount = 0,
-	fogDensity = 0, contrast = 0, saturation = 0, ambience = 0,
+	noRecoil = false, noSpread = false,
+	fogDensity = 0, contrast = 0, saturation = 0,
 	chatLogs = false, joinLogs = false,
 	toggleGuiKey = "M", toggleEspKey = "J",
 	autoTeamEsp = true
@@ -78,7 +80,6 @@ local C = {
 	bgAlt = Color3.fromRGB(18, 18, 24),
 	card = Color3.fromRGB(22, 22, 30),
 	cardHover = Color3.fromRGB(30, 30, 42),
-	cardActive = Color3.fromRGB(35, 30, 50),
 	accent = Color3.fromRGB(138, 43, 226),
 	accentDark = Color3.fromRGB(88, 28, 146),
 	accentLight = Color3.fromRGB(180, 100, 255),
@@ -121,9 +122,90 @@ end
 
 local function destroyGui()
 	saveSettings()
+	if originalCameraShake and cameraShaker then
+		pcall(function()
+			for name, val in pairs(originalCameraShake) do
+				if cameraShaker:FindFirstChild(name) then
+					cameraShaker[name].Value = val
+				end
+			end
+		end)
+	end
 	for _, c in pairs(connections) do if c and typeof(c) == "RBXScriptConnection" and c.Connected then c:Disconnect() end end
 	_G.PhantomGui = nil
 	gui:Destroy()
+end
+
+local function getSprintFolder()
+	local serverVars = player:FindFirstChild("ServerVariables")
+	if serverVars then
+		return serverVars:FindFirstChild("Sprint")
+	end
+	return nil
+end
+
+local function getCameraShaker()
+	local playerScripts = player:FindFirstChild("PlayerScripts")
+	if not playerScripts then return nil end
+	local wc = playerScripts:FindFirstChild("WC")
+	if not wc then return nil end
+	local weaponClient = wc:FindFirstChild("WeaponClient")
+	if not weaponClient then return nil end
+	return weaponClient:FindFirstChild("CameraShaker")
+end
+
+local function setNoRecoil(enabled)
+	local shaker = getCameraShaker()
+	if not shaker then return end
+	cameraShaker = shaker
+	if enabled then
+		if not originalCameraShake then
+			originalCameraShake = {}
+			for _, child in pairs(shaker:GetChildren()) do
+				if child:IsA("ValueBase") then
+					originalCameraShake[child.Name] = child.Value
+				end
+			end
+		end
+		for _, child in pairs(shaker:GetChildren()) do
+			if child:IsA("NumberValue") or child:IsA("IntValue") then
+				child.Value = 0
+			end
+		end
+		local presets = shaker:FindFirstChild("CameraShakePresets")
+		if presets then
+			for _, preset in pairs(presets:GetChildren()) do
+				for _, val in pairs(preset:GetChildren()) do
+					if val:IsA("NumberValue") or val:IsA("IntValue") then
+						val.Value = 0
+					end
+				end
+			end
+		end
+	else
+		if originalCameraShake then
+			for name, val in pairs(originalCameraShake) do
+				local child = shaker:FindFirstChild(name)
+				if child then child.Value = val end
+			end
+		end
+	end
+end
+
+local function setInfiniteStamina(enabled)
+	local sprint = getSprintFolder()
+	if not sprint then return end
+	if enabled then
+		local stamina = sprint:FindFirstChild("Stamina")
+		local maxStamina = sprint:FindFirstChild("MaxStamina")
+		local subPerM = sprint:FindFirstChild("SubPerM")
+		if stamina and maxStamina then
+			stamina.Value = maxStamina.Value
+		end
+		if subPerM then
+			subPerM.Value = 0
+		end
+	end
 end
 
 local loadScreen = Instance.new("Frame")
@@ -327,7 +409,7 @@ local versionText = Instance.new("TextLabel")
 versionText.Size = UDim2.new(0, 100, 0, 12)
 versionText.Position = UDim2.new(0, 46, 0, 25)
 versionText.BackgroundTransparency = 1
-versionText.Text = "v7.0 by Mishka"
+versionText.Text = "v7.1 by Mishka"
 versionText.TextColor3 = C.textDim
 versionText.TextSize = 9
 versionText.Font = Enum.Font.Gotham
@@ -657,13 +739,6 @@ local function createSlider(parent, text, min, max, default, callback)
 			update((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X)
 		end
 	end)
-
-	return {setValue = function(val)
-		local p = (val - min) / (max - min)
-		fill.Size = UDim2.new(p, 0, 1, 0)
-		knob.Position = UDim2.new(p, -6, 0.5, -6)
-		valueLabel.Text = tostring(math.floor(val))
-	end}
 end
 
 local function createButton(parent, text, callback)
@@ -734,8 +809,6 @@ local function createKeybind(parent, text, default, callback)
 			end
 		end)
 	end)
-
-	return {setLabel = function(key) label.Text = text .. ": " .. key end}
 end
 
 local function createLocBtn(parent, loc)
@@ -990,9 +1063,7 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 	if not hum or not hrp then return end
 
 	if Settings.infStamina then
-		for _, v in pairs(c:GetDescendants()) do
-			if v.Name == "Stamina" and v:IsA("NumberValue") then v.Value = 100 end
-		end
+		setInfiniteStamina(true)
 	end
 
 	if Settings.noclip then
@@ -1065,6 +1136,10 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 
 	if Settings.desync then
 		hrp.Velocity = Vector3.new(0, 0, 0)
+	end
+
+	if Settings.noRecoil then
+		setNoRecoil(true)
 	end
 end))
 
@@ -1201,10 +1276,8 @@ local function updateESP(plr)
 
 	local old = head:FindFirstChild("PhantomESP")
 	local oldH = c:FindFirstChild("PhantomHL")
-	local oldT = c:FindFirstChild("PhantomTracer")
 	if old then old:Destroy() end
 	if oldH then oldH:Destroy() end
-	if oldT then oldT:Destroy() end
 	if not show then return end
 
 	local bb = Instance.new("BillboardGui", head)
@@ -1509,7 +1582,7 @@ createToggle(aimFrame, "Triggerbot", Settings.triggerbot, function(on) Settings.
 
 createSection(aimFrame, "Aim Settings")
 createSlider(aimFrame, "Smoothness", 5, 100, Settings.aimSmoothness * 100, function(v) Settings.aimSmoothness = v / 100 end)
-local fovSlider = createSlider(aimFrame, "FOV Size", 30, 300, Settings.fovSize, function(v) Settings.fovSize = v updateFOV() end)
+createSlider(aimFrame, "FOV Size", 30, 300, Settings.fovSize, function(v) Settings.fovSize = v updateFOV() end)
 createSlider(aimFrame, "Hit Chance", 1, 100, Settings.hitChance, function(v) Settings.hitChance = v end)
 
 createSection(aimFrame, "Keybind")
@@ -1554,27 +1627,12 @@ end))
 
 local gunFrame = createTab("Guns")
 createSection(gunFrame, "Gun Mods")
-createToggle(gunFrame, "No Recoil", Settings.noRecoil, function(on) Settings.noRecoil = on saveSettings() end)
+createToggle(gunFrame, "No Recoil", Settings.noRecoil, function(on)
+	Settings.noRecoil = on
+	setNoRecoil(on)
+	saveSettings()
+end)
 createToggle(gunFrame, "No Spread", Settings.noSpread, function(on) Settings.noSpread = on saveSettings() end)
-createSlider(gunFrame, "Recoil Amount", 0, 100, Settings.recoilAmount, function(v) Settings.recoilAmount = v end)
-createSlider(gunFrame, "Spread Amount", 0, 100, Settings.spreadAmount, function(v) Settings.spreadAmount = v end)
-
-table.insert(connections, RunService.RenderStepped:Connect(function()
-	local c = player.Character
-	if not c then return end
-	for _, t in pairs(c:GetChildren()) do
-		if t:IsA("Tool") then
-			for _, d in pairs(t:GetDescendants()) do
-				if d.Name:lower():find("recoil") and (d:IsA("NumberValue") or d:IsA("IntValue")) then
-					if Settings.noRecoil then d.Value = 0 else d.Value = Settings.recoilAmount end
-				end
-				if (d.Name:lower():find("spread") or d.Name:lower():find("accuracy")) and (d:IsA("NumberValue") or d:IsA("IntValue")) then
-					if Settings.noSpread then d.Value = 0 else d.Value = Settings.spreadAmount end
-				end
-			end
-		end
-	end
-end))
 
 local visualFrame = createTab("Visuals")
 createSection(visualFrame, "World Effects")
@@ -1721,7 +1779,7 @@ local credVer = Instance.new("TextLabel", credCard)
 credVer.Size = UDim2.new(1, 0, 0, 12)
 credVer.Position = UDim2.new(0, 0, 0, 78)
 credVer.BackgroundTransparency = 1
-credVer.Text = "v7.0 Premium"
+credVer.Text = "v7.1 Premium"
 credVer.TextColor3 = C.textDim
 credVer.TextSize = 9
 credVer.Font = Enum.Font.GothamSemibold
@@ -1809,7 +1867,10 @@ task.defer(function()
 	if Settings.infZoom then
 		player.CameraMaxZoomDistance = 9999
 	end
+	if Settings.noRecoil then
+		setNoRecoil(true)
+	end
 	workspace.CurrentCamera.FieldOfView = Settings.fov
 end)
 
-print("PHANTOM v7.0 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
+print("PHANTOM v7.1 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
