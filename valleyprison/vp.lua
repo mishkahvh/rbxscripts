@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 
 if _G.PhantomGui then _G.PhantomGui:Destroy() end
@@ -208,6 +208,225 @@ local function setInfiniteStamina(enabled)
 	end
 end
 
+local function removePepperEffect()
+	local playerGui = player:FindFirstChild("PlayerGui")
+	if playerGui then
+		for _, g in pairs(playerGui:GetDescendants()) do
+			local name = g.Name:lower()
+			if name:find("pepper") or name:find("blind") or name:find("spray") then
+				pcall(function() g:Destroy() end)
+			end
+			if g:IsA("Frame") or g:IsA("ImageLabel") then
+				if g.BackgroundColor3 == Color3.fromRGB(255, 165, 0) or 
+				   g.BackgroundColor3 == Color3.fromRGB(255, 140, 0) or
+				   g.BackgroundColor3 == Color3.fromRGB(255, 100, 0) or
+				   (g.BackgroundTransparency < 0.9 and g.BackgroundColor3.R > 0.8 and g.BackgroundColor3.G > 0.3 and g.BackgroundColor3.G < 0.7 and g.BackgroundColor3.B < 0.2) then
+					pcall(function() g.Visible = false g:Destroy() end)
+				end
+			end
+			if g:IsA("ImageLabel") and g.ImageColor3 then
+				if g.ImageColor3.R > 0.8 and g.ImageColor3.G > 0.3 and g.ImageColor3.G < 0.7 and g.ImageColor3.B < 0.2 then
+					pcall(function() g.Visible = false g:Destroy() end)
+				end
+			end
+		end
+	end
+	for _, effect in pairs(Lighting:GetChildren()) do
+		if effect:IsA("ColorCorrectionEffect") then
+			if effect.TintColor.R > 0.8 and effect.TintColor.G > 0.3 and effect.TintColor.G < 0.7 and effect.TintColor.B < 0.3 then
+				pcall(function() effect:Destroy() end)
+			end
+		end
+	end
+	local character = player.Character
+	if character then
+		for _, v in pairs(character:GetDescendants()) do
+			local name = v.Name:lower()
+			if name:find("pepper") or name:find("blind") or name:find("spray") or name:find("effect") then
+				pcall(function() v:Destroy() end)
+			end
+		end
+	end
+end
+
+local chatLogWindow = nil
+local chatLogList = nil
+local joinLogWindow = nil
+local joinLogList = nil
+
+local function createLogWindow(title, posOffset)
+	local window = Instance.new("Frame")
+	window.Size = UDim2.new(0, 300, 0, 250)
+	window.Position = UDim2.new(0.5, posOffset, 0.5, -125)
+	window.AnchorPoint = Vector2.new(0.5, 0)
+	window.BackgroundColor3 = C.bg
+	window.BorderSizePixel = 0
+	window.Visible = false
+	window.Parent = gui
+	Instance.new("UICorner", window).CornerRadius = UDim.new(0, 8)
+	local windowStroke = Instance.new("UIStroke", window)
+	windowStroke.Color = C.accentDark
+	windowStroke.Thickness = 1
+
+	local header = Instance.new("Frame")
+	header.Size = UDim2.new(1, 0, 0, 30)
+	header.BackgroundColor3 = C.bgAlt
+	header.BorderSizePixel = 0
+	header.Parent = window
+	Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
+
+	local headerFix = Instance.new("Frame")
+	headerFix.Size = UDim2.new(1, 0, 0, 10)
+	headerFix.Position = UDim2.new(0, 0, 1, -10)
+	headerFix.BackgroundColor3 = C.bgAlt
+	headerFix.BorderSizePixel = 0
+	headerFix.Parent = header
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(1, -40, 1, 0)
+	titleLabel.Position = UDim2.new(0, 10, 0, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = title
+	titleLabel.TextColor3 = C.text
+	titleLabel.TextSize = 12
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.Parent = header
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Size = UDim2.new(0, 20, 0, 20)
+	closeBtn.Position = UDim2.new(1, -25, 0.5, -10)
+	closeBtn.BackgroundColor3 = C.danger
+	closeBtn.BackgroundTransparency = 0.8
+	closeBtn.Text = "×"
+	closeBtn.TextColor3 = C.danger
+	closeBtn.TextSize = 14
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Parent = header
+	Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 4)
+
+	closeBtn.MouseButton1Click:Connect(function()
+		window.Visible = false
+	end)
+
+	local dragging, dragStart, startPos = false, nil, nil
+	header.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = i.Position
+			startPos = window.Position
+		end
+	end)
+	header.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+	end)
+	table.insert(connections, UserInputService.InputChanged:Connect(function(i)
+		if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+			local d = i.Position - dragStart
+			window.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end))
+
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = UDim2.new(1, -10, 1, -40)
+	scroll.Position = UDim2.new(0, 5, 0, 35)
+	scroll.BackgroundTransparency = 1
+	scroll.ScrollBarThickness = 3
+	scroll.ScrollBarImageColor3 = C.accent
+	scroll.BorderSizePixel = 0
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.Parent = window
+
+	local layout = Instance.new("UIListLayout", scroll)
+	layout.Padding = UDim.new(0, 3)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	return window, scroll
+end
+
+local function addLogEntry(list, text, color, order)
+	local entry = Instance.new("TextLabel")
+	entry.Size = UDim2.new(1, -5, 0, 0)
+	entry.AutomaticSize = Enum.AutomaticSize.Y
+	entry.BackgroundColor3 = C.card
+	entry.BorderSizePixel = 0
+	entry.Text = text
+	entry.TextColor3 = color or C.text
+	entry.TextSize = 10
+	entry.Font = Enum.Font.Gotham
+	entry.TextXAlignment = Enum.TextXAlignment.Left
+	entry.TextWrapped = true
+	entry.LayoutOrder = order or 0
+	entry.Parent = list
+	Instance.new("UICorner", entry).CornerRadius = UDim.new(0, 4)
+	local pad = Instance.new("UIPadding", entry)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 4)
+	return entry
+end
+
+chatLogWindow, chatLogList = createLogWindow("Chat Logs", -160)
+joinLogWindow, joinLogList = createLogWindow("Join/Leave Logs", 160)
+
+local chatOrder = 0
+local joinOrder = 0
+
+local function onPlayerChatted(plr, msg)
+	if not Settings.chatLogs then return end
+	chatOrder = chatOrder + 1
+	local teamColor = TEAM_COLORS[plr.Team and plr.Team.Name or "Civilian"] or C.textMid
+	local timestamp = os.date("%H:%M:%S")
+	addLogEntry(chatLogList, "[" .. timestamp .. "] " .. plr.Name .. ": " .. msg, teamColor, chatOrder)
+	if chatLogList.CanvasPosition.Y > chatLogList.AbsoluteCanvasSize.Y - 300 then
+		chatLogList.CanvasPosition = Vector2.new(0, chatLogList.AbsoluteCanvasSize.Y)
+	end
+end
+
+local function onPlayerJoined(plr)
+	if not Settings.joinLogs then return end
+	joinOrder = joinOrder + 1
+	local timestamp = os.date("%H:%M:%S")
+	addLogEntry(joinLogList, "[" .. timestamp .. "] + " .. plr.Name .. " joined", C.success, joinOrder)
+	if joinLogList.CanvasPosition.Y > joinLogList.AbsoluteCanvasSize.Y - 300 then
+		joinLogList.CanvasPosition = Vector2.new(0, joinLogList.AbsoluteCanvasSize.Y)
+	end
+end
+
+local function onPlayerLeft(plr)
+	if not Settings.joinLogs then return end
+	joinOrder = joinOrder + 1
+	local timestamp = os.date("%H:%M:%S")
+	addLogEntry(joinLogList, "[" .. timestamp .. "] - " .. plr.Name .. " left", C.danger, joinOrder)
+	if joinLogList.CanvasPosition.Y > joinLogList.AbsoluteCanvasSize.Y - 300 then
+		joinLogList.CanvasPosition = Vector2.new(0, joinLogList.AbsoluteCanvasSize.Y)
+	end
+end
+
+for _, plr in pairs(Players:GetPlayers()) do
+	pcall(function()
+		plr.Chatted:Connect(function(msg)
+			onPlayerChatted(plr, msg)
+		end)
+	end)
+end
+
+table.insert(connections, Players.PlayerAdded:Connect(function(plr)
+	onPlayerJoined(plr)
+	pcall(function()
+		plr.Chatted:Connect(function(msg)
+			onPlayerChatted(plr, msg)
+		end)
+	end)
+end))
+
+table.insert(connections, Players.PlayerRemoving:Connect(function(plr)
+	onPlayerLeft(plr)
+end))
+
 local loadScreen = Instance.new("Frame")
 loadScreen.Size = UDim2.new(1, 0, 1, 0)
 loadScreen.BackgroundColor3 = C.bg
@@ -409,7 +628,7 @@ local versionText = Instance.new("TextLabel")
 versionText.Size = UDim2.new(0, 100, 0, 12)
 versionText.Position = UDim2.new(0, 46, 0, 25)
 versionText.BackgroundTransparency = 1
-versionText.Text = "v7.1 by Mishka"
+versionText.Text = "v7.2 by Mishka"
 versionText.TextColor3 = C.textDim
 versionText.TextSize = 9
 versionText.Font = Enum.Font.Gotham
@@ -873,7 +1092,10 @@ local function createLocBtn(parent, loc)
 			c.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y, loc.z)
 			btn.Text = "..."
 
-			for i = 1, 25 do
+			local startTime = tick()
+			local timeout = 7
+
+			while tick() - startTime < timeout do
 				for _, v in pairs(workspace:GetDescendants()) do
 					if v:IsA("ProximityPrompt") and v.Parent and v.Parent:IsA("BasePart") then
 						if (v.Parent.Position - c.HumanoidRootPart.Position).Magnitude < 15 then
@@ -896,6 +1118,7 @@ local function createLocBtn(parent, loc)
 					return
 				end
 			end
+
 			c.HumanoidRootPart.CFrame = origCF
 			btn.Text = "X"
 			tween(btn, {BackgroundColor3 = C.danger})
@@ -1079,9 +1302,7 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 	end
 
 	if Settings.noPepper then
-		for _, v in pairs(c:GetDescendants()) do
-			if v.Name:lower():find("pepper") then pcall(function() v:Destroy() end) end
-		end
+		removePepperEffect()
 	end
 
 	if Settings.antiCuff then
@@ -1267,7 +1488,6 @@ local function updateESP(plr)
 	if not c then return end
 	local head = c:FindFirstChild("Head")
 	local hum = c:FindFirstChild("Humanoid")
-	local hrp = c:FindFirstChild("HumanoidRootPart")
 	if not head then return end
 
 	local currentTeam = getCurrentTeam(plr)
@@ -1574,8 +1794,8 @@ table.insert(connections, UserInputService.InputEnded:Connect(function(i)
 end))
 
 createSection(aimFrame, "Aimbot")
-local aimToggle = createToggle(aimFrame, "Aimbot", Settings.aimEnabled, function(on) Settings.aimEnabled = on updateFOV() saveSettings() end, "aimEnabled")
-local fovToggle = createToggle(aimFrame, "Show FOV", Settings.showFOV, function(on) Settings.showFOV = on updateFOV() saveSettings() end, "showFOV")
+createToggle(aimFrame, "Aimbot", Settings.aimEnabled, function(on) Settings.aimEnabled = on updateFOV() saveSettings() end, "aimEnabled")
+createToggle(aimFrame, "Show FOV", Settings.showFOV, function(on) Settings.showFOV = on updateFOV() saveSettings() end, "showFOV")
 createToggle(aimFrame, "Wall Check", Settings.wallCheck, function(on) Settings.wallCheck = on saveSettings() end)
 createToggle(aimFrame, "Sticky Aim", Settings.stickyAim, function(on) Settings.stickyAim = on sticky = nil saveSettings() end)
 createToggle(aimFrame, "Triggerbot", Settings.triggerbot, function(on) Settings.triggerbot = on saveSettings() end)
@@ -1708,9 +1928,17 @@ createToggle(visualFrame, "Enable Crosshair", Settings.crosshairEnabled, functio
 end)
 
 local configFrame = createTab("Config")
-createSection(configFrame, "Modules")
-createToggle(configFrame, "Chat Logs", Settings.chatLogs, function(on) Settings.chatLogs = on saveSettings() end)
-createToggle(configFrame, "Join Logs", Settings.joinLogs, function(on) Settings.joinLogs = on saveSettings() end)
+createSection(configFrame, "Log Windows")
+createToggle(configFrame, "Chat Logs", Settings.chatLogs, function(on)
+	Settings.chatLogs = on
+	chatLogWindow.Visible = on
+	saveSettings()
+end)
+createToggle(configFrame, "Join/Leave Logs", Settings.joinLogs, function(on)
+	Settings.joinLogs = on
+	joinLogWindow.Visible = on
+	saveSettings()
+end)
 
 createSection(configFrame, "Keybinds")
 createKeybind(configFrame, "Toggle GUI", Settings.toggleGuiKey, function(key)
@@ -1728,18 +1956,6 @@ createButton(configFrame, "Reset Character", function()
 	if player.Character then player.Character:BreakJoints() end
 end)
 createButton(configFrame, "Destroy GUI", destroyGui)
-
-table.insert(connections, Players.PlayerAdded:Connect(function(p)
-	if Settings.joinLogs then
-		print("[JOIN] " .. p.Name .. " joined the server")
-	end
-end))
-
-table.insert(connections, Players.PlayerRemoving:Connect(function(p)
-	if Settings.joinLogs then
-		print("[LEAVE] " .. p.Name .. " left the server")
-	end
-end))
 
 local credFrame = createTab("Credits")
 
@@ -1779,7 +1995,7 @@ local credVer = Instance.new("TextLabel", credCard)
 credVer.Size = UDim2.new(1, 0, 0, 12)
 credVer.Position = UDim2.new(0, 0, 0, 78)
 credVer.BackgroundTransparency = 1
-credVer.Text = "v7.1 Premium"
+credVer.Text = "v7.2 Premium"
 credVer.TextColor3 = C.textDim
 credVer.TextSize = 9
 credVer.Font = Enum.Font.GothamSemibold
@@ -1871,6 +2087,12 @@ task.defer(function()
 		setNoRecoil(true)
 	end
 	workspace.CurrentCamera.FieldOfView = Settings.fov
+	if Settings.chatLogs then
+		chatLogWindow.Visible = true
+	end
+	if Settings.joinLogs then
+		joinLogWindow.Visible = true
+	end
 end)
 
-print("PHANTOM v7.1 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
+print("PHANTOM v7.2 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
