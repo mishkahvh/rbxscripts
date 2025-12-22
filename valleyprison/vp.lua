@@ -16,9 +16,13 @@ local LOCATIONS = {
 	{name = "Outside", x = 197.8267822265625, y = 9.74256610870361, z = 83.4042053222562},
 	{name = "Prison Cell", x = 24.979963302612305, y = 22.125404357910156, z = -50.68348693847656},
 	{name = "Cafe", x = 99.8274154663086, y = 11.2254056930542, z = 28.34731101989746},
-	{name = "Directors Office", x = 98.7244873046875, y = 11.2254056930542, z = 32.67652893066406},
-	{name = "Booking", x = 98.7244873046875, y = 11.2254056930542, z = 32.67652893066406},
-	{name = "Tunnels", x = 98.7244873046875, y = 11.2254056930542, z = 32.67652893066406}
+	{name = "Directors Office", x = 123.79, y = 23.08, z = -99.76},
+	{name = "Booking", x = 187.83, y = 11.22, z = -135.26},
+	{name = "Tunnels", x = 96.06, y = -8.88, z = -216.29},
+	{name = "Min/Med Block", x = -7.21, y = 11.22, z = -63.56},
+	{name = "Gym", x = 24.51, y = 22.17, z = 3.36},
+	{name = "Barnside", x = 18.26, y = 10.02, z = 41.34},
+	{name = "Front Gate", x = 20.34, y = 7.61, z = 45.57}
 }
 
 local TEAM_COLORS = {
@@ -50,6 +54,8 @@ local TARGET_TEAMS = {
 -- Settings (ALL OFF by default)
 local Settings = {
 	espEnabled = false,
+	showName = false,
+	showTeam = false,
 	showDistance = false,
 	showHealth = false,
 	showBox = false,
@@ -237,10 +243,14 @@ local minimized = false
 minBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	if minimized then
+		content.Visible = false
+		tabContainer.Visible = false
 		main.Size = UDim2.new(0, 500, 0, 50)
 		minBtn.Text = "+"
 	else
 		main.Size = UDim2.new(0, 500, 0, 580)
+		content.Visible = true
+		tabContainer.Visible = true
 		minBtn.Text = "─"
 	end
 end)
@@ -800,33 +810,42 @@ local function updateESP(plr)
 	billboard.AlwaysOnTop = true
 	billboard.Parent = head
 
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, 0, 0, 14)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = plr.Name
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 11
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	nameLabel.TextStrokeTransparency = 0
-	nameLabel.Parent = billboard
+	local yOffset = 0
 
-	local teamLabel = Instance.new("TextLabel")
-	teamLabel.Size = UDim2.new(1, 0, 0, 12)
-	teamLabel.Position = UDim2.new(0, 0, 0, 13)
-	teamLabel.BackgroundTransparency = 1
-	teamLabel.Text = teamName
-	teamLabel.TextColor3 = teamColor
-	teamLabel.TextSize = 9
-	teamLabel.Font = Enum.Font.GothamSemibold
-	teamLabel.TextStrokeTransparency = 0
-	teamLabel.Parent = billboard
+	if Settings.showName then
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(1, 0, 0, 14)
+		nameLabel.Position = UDim2.new(0, 0, 0, yOffset)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = plr.Name
+		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nameLabel.TextSize = 11
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		nameLabel.TextStrokeTransparency = 0
+		nameLabel.Parent = billboard
+		yOffset = yOffset + 14
+	end
+
+	if Settings.showTeam then
+		local teamLabel = Instance.new("TextLabel")
+		teamLabel.Size = UDim2.new(1, 0, 0, 12)
+		teamLabel.Position = UDim2.new(0, 0, 0, yOffset)
+		teamLabel.BackgroundTransparency = 1
+		teamLabel.Text = teamName
+		teamLabel.TextColor3 = teamColor
+		teamLabel.TextSize = 9
+		teamLabel.Font = Enum.Font.GothamSemibold
+		teamLabel.TextStrokeTransparency = 0
+		teamLabel.Parent = billboard
+		yOffset = yOffset + 13
+	end
 
 	if Settings.showDistance then
 		local distLabel = Instance.new("TextLabel")
 		distLabel.Name = "Distance"
 		distLabel.Size = UDim2.new(1, 0, 0, 10)
-		distLabel.Position = UDim2.new(0, 0, 0, 26)
+		distLabel.Position = UDim2.new(0, 0, 0, yOffset)
 		distLabel.BackgroundTransparency = 1
 		distLabel.Text = "[0m]"
 		distLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -834,12 +853,13 @@ local function updateESP(plr)
 		distLabel.Font = Enum.Font.Gotham
 		distLabel.TextStrokeTransparency = 0
 		distLabel.Parent = billboard
+		yOffset = yOffset + 12
 	end
 
 	if Settings.showHealth and humanoid then
 		local healthBg = Instance.new("Frame")
 		healthBg.Size = UDim2.new(0.7, 0, 0, 4)
-		healthBg.Position = UDim2.new(0.15, 0, 0, 40)
+		healthBg.Position = UDim2.new(0.15, 0, 0, yOffset + 2)
 		healthBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 		healthBg.BorderSizePixel = 0
 		healthBg.Parent = billboard
@@ -929,6 +949,16 @@ createToggle(espFrame, "Enable ESP", Settings.espEnabled, function(on)
 end)
 
 createSection(espFrame, "VISUALS")
+createToggle(espFrame, "Show Name", Settings.showName, function(on)
+	Settings.showName = on
+	if Settings.espEnabled then refreshAllESP() end
+	saveSettings()
+end)
+createToggle(espFrame, "Show Team", Settings.showTeam, function(on)
+	Settings.showTeam = on
+	if Settings.espEnabled then refreshAllESP() end
+	saveSettings()
+end)
 createToggle(espFrame, "Show Distance", Settings.showDistance, function(on)
 	Settings.showDistance = on
 	if Settings.espEnabled then refreshAllESP() end
