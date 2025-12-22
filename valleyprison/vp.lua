@@ -43,14 +43,21 @@ local TEAM_COLORS = {
 
 local TARGET_TEAMS = {"Minimum Security", "Medium Security", "Maximum Security", "Escapee", "State Police", "Department of Corrections"}
 
+local PRISONER_TEAMS = {"Minimum Security", "Medium Security", "Maximum Security", "Escapee"}
+local COP_TEAMS = {"State Police", "Department of Corrections"}
+
 local Settings = {
-	espEnabled = false, showName = false, showTeam = false, showDistance = false, showHealth = false, showBox = false, espTeams = {},
-	aimEnabled = false, aimSmoothness = 0.35, aimFOV = 90, aimPart = "Head", aimHoldKey = "Q", showFOV = false, fovSize = 90, wallCheck = false, stickyAim = false, aimTeams = {},
-	crosshairEnabled = false, crosshairStyle = "Cross", crosshairColor = {255, 255, 255}, targetInfoEnabled = false,
-	bhop = false, infJump = false, infStamina = false, fly = false, noclip = false, flySpeed = 50, jumpPower = 50, walkSpeed = 16,
-	noPepper = false, antiCuff = false, noStun = false, spinbot = false, spinSpeed = 10,
-	infZoom = false, autoPickup = false, fullBright = false, noFog = false, fov = 70, noRecoil = false, noSpread = false,
-	toggleGuiKey = "M"
+	espEnabled = false, showName = false, showTeam = false, showDistance = false, showHealth = false, showBox = false, showTracer = false, showTool = false, espTeams = {},
+	aimEnabled = false, aimSmoothness = 0.35, aimFOV = 90, aimPart = "Head", aimHoldKey = "Q", showFOV = false, fovSize = 90, wallCheck = false, stickyAim = false, aimTeams = {}, triggerbot = false, hitChance = 100,
+	crosshairEnabled = false, crosshairStyle = "Cross", crosshairColor = {255, 255, 255},
+	bhop = false, infJump = false, infStamina = false, fly = false, noclip = false, flySpeed = 50, jumpPower = 50, walkSpeed = 16, cframeWalk = false, cframeSpeed = 1,
+	noPepper = false, antiCuff = false, noStun = false, spinbot = false, spinSpeed = 10, desync = false,
+	infZoom = false, autoPickup = false, fullBright = false, noFog = false, fov = 70,
+	noRecoil = false, noSpread = false, recoilAmount = 0, spreadAmount = 0,
+	fogDensity = 0, contrast = 0, saturation = 0, ambience = 0,
+	chatLogs = false, joinLogs = false,
+	toggleGuiKey = "M", toggleEspKey = "J",
+	autoTeamEsp = true
 }
 
 for tn, _ in pairs(TEAM_COLORS) do Settings.espTeams[tn] = false Settings.aimTeams[tn] = false end
@@ -81,7 +88,6 @@ local C = {
 	success = Color3.fromRGB(45, 212, 121),
 	danger = Color3.fromRGB(255, 71, 87),
 	warning = Color3.fromRGB(255, 159, 67),
-	glow = Color3.fromRGB(138, 43, 226)
 }
 
 local gui = Instance.new("ScreenGui")
@@ -140,6 +146,7 @@ loadLogo.BackgroundTransparency = 1
 loadLogo.BorderSizePixel = 0
 loadLogo.Parent = loadCenter
 Instance.new("UICorner", loadLogo).CornerRadius = UDim.new(0, 14)
+
 local loadLogoStroke = Instance.new("UIStroke", loadLogo)
 loadLogoStroke.Color = C.accent
 loadLogoStroke.Thickness = 2
@@ -192,15 +199,6 @@ loadBarFill.BorderSizePixel = 0
 loadBarFill.Parent = loadBarBg
 Instance.new("UICorner", loadBarFill).CornerRadius = UDim.new(1, 0)
 
-local loadBarGlow = Instance.new("Frame")
-loadBarGlow.Size = UDim2.new(0, 0, 1, 6)
-loadBarGlow.Position = UDim2.new(0, 0, 0, -3)
-loadBarGlow.BackgroundColor3 = C.accent
-loadBarGlow.BackgroundTransparency = 0.7
-loadBarGlow.BorderSizePixel = 0
-loadBarGlow.Parent = loadBarBg
-Instance.new("UICorner", loadBarGlow).CornerRadius = UDim.new(1, 0)
-
 tween(loadLogo, {BackgroundTransparency = 0}, 0.4)
 tween(loadLogoStroke, {Transparency = 0}, 0.4)
 tween(loadLogoText, {TextTransparency = 0}, 0.4)
@@ -212,7 +210,6 @@ task.wait(0.1)
 
 for i = 1, 10 do
 	tween(loadBarFill, {Size = UDim2.new(i / 10, 0, 1, 0)}, 0.08)
-	tween(loadBarGlow, {Size = UDim2.new(i / 10, 0, 1, 6)}, 0.08)
 	task.wait(0.08)
 end
 
@@ -224,7 +221,6 @@ tween(loadTitle, {TextTransparency = 1}, 0.3)
 tween(loadSub, {TextTransparency = 1}, 0.3)
 tween(loadBarBg, {BackgroundTransparency = 1}, 0.3)
 tween(loadBarFill, {BackgroundTransparency = 1}, 0.3)
-tween(loadBarGlow, {BackgroundTransparency = 1}, 0.3)
 tween(loadScreen, {BackgroundTransparency = 1}, 0.4)
 task.wait(0.4)
 loadScreen:Destroy()
@@ -257,7 +253,7 @@ shadow.SliceCenter = Rect.new(24, 24, 276, 276)
 shadow.ZIndex = 0
 shadow.Parent = main
 
-tween(main, {Size = UDim2.new(0, 620, 0, 400)}, 0.5, Enum.EasingStyle.Back)
+tween(main, {Size = UDim2.new(0, 640, 0, 420)}, 0.5, Enum.EasingStyle.Back)
 task.wait(0.3)
 
 local topBar = Instance.new("Frame")
@@ -265,9 +261,7 @@ topBar.Size = UDim2.new(1, 0, 0, 42)
 topBar.BackgroundColor3 = C.bgAlt
 topBar.BorderSizePixel = 0
 topBar.Parent = main
-
-local topCorner = Instance.new("UICorner", topBar)
-topCorner.CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 8)
 
 local topFix = Instance.new("Frame")
 topFix.Size = UDim2.new(1, 0, 0, 12)
@@ -295,7 +289,7 @@ accentGrad.Color = ColorSequence.new({
 task.spawn(function()
 	local offset = 0
 	while gui.Parent do
-		offset = (offset + 0.005) % 1
+		offset = (offset + 0.003) % 1
 		accentGrad.Offset = Vector2.new(offset, 0)
 		task.wait()
 	end
@@ -333,7 +327,7 @@ local versionText = Instance.new("TextLabel")
 versionText.Size = UDim2.new(0, 100, 0, 12)
 versionText.Position = UDim2.new(0, 46, 0, 25)
 versionText.BackgroundTransparency = 1
-versionText.Text = "v6.0 by Mishka"
+versionText.Text = "v7.0 by Mishka"
 versionText.TextColor3 = C.textDim
 versionText.TextSize = 9
 versionText.Font = Enum.Font.Gotham
@@ -379,10 +373,10 @@ local minimized = false
 minBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	if minimized then
-		tween(main, {Size = UDim2.new(0, 620, 0, 44)}, 0.3, Enum.EasingStyle.Quint)
+		tween(main, {Size = UDim2.new(0, 640, 0, 44)}, 0.3, Enum.EasingStyle.Quint)
 		minBtn.Text = "+"
 	else
-		tween(main, {Size = UDim2.new(0, 620, 0, 400)}, 0.35, Enum.EasingStyle.Back)
+		tween(main, {Size = UDim2.new(0, 640, 0, 420)}, 0.35, Enum.EasingStyle.Back)
 		minBtn.Text = "−"
 	end
 end)
@@ -410,15 +404,25 @@ navBar.Size = UDim2.new(1, -20, 0, 32)
 navBar.Position = UDim2.new(0, 10, 0, 52)
 navBar.BackgroundColor3 = C.bgAlt
 navBar.BorderSizePixel = 0
+navBar.ClipsDescendants = true
 navBar.Parent = main
 Instance.new("UICorner", navBar).CornerRadius = UDim.new(0, 6)
 
-local navLayout = Instance.new("UIListLayout", navBar)
+local navScroll = Instance.new("ScrollingFrame")
+navScroll.Size = UDim2.new(1, 0, 1, 0)
+navScroll.BackgroundTransparency = 1
+navScroll.ScrollBarThickness = 0
+navScroll.ScrollingDirection = Enum.ScrollingDirection.X
+navScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+navScroll.AutomaticCanvasSize = Enum.AutomaticSize.X
+navScroll.Parent = navBar
+
+local navLayout = Instance.new("UIListLayout", navScroll)
 navLayout.FillDirection = Enum.FillDirection.Horizontal
 navLayout.Padding = UDim.new(0, 2)
 navLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-local navPad = Instance.new("UIPadding", navBar)
+local navPad = Instance.new("UIPadding", navScroll)
 navPad.PaddingLeft = UDim.new(0, 4)
 
 local contentFrame = Instance.new("Frame")
@@ -433,17 +437,17 @@ local currentTab = nil
 
 local function createTab(name)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 58, 0, 26)
+	btn.Size = UDim2.new(0, 52, 0, 26)
 	btn.BackgroundColor3 = C.card
 	btn.BackgroundTransparency = 1
 	btn.Text = name
 	btn.TextColor3 = C.textDim
-	btn.TextSize = 10
+	btn.TextSize = 9
 	btn.Font = Enum.Font.GothamBold
 	btn.BorderSizePixel = 0
 	btn.AutoButtonColor = false
 	btn.ClipsDescendants = true
-	btn.Parent = navBar
+	btn.Parent = navScroll
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
 
 	local frame = Instance.new("ScrollingFrame")
@@ -475,8 +479,7 @@ local function createTab(name)
 		if currentTab ~= tabs[name] then tween(btn, {BackgroundTransparency = 1, TextColor3 = C.textDim}) end
 	end)
 	btn.MouseButton1Click:Connect(function()
-		local rel = Vector2.new(btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2)
-		ripple(btn, rel.X, rel.Y)
+		ripple(btn, btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2)
 		if currentTab then
 			tween(currentTab.btn, {BackgroundTransparency = 1, TextColor3 = C.textDim})
 			currentTab.frame.Visible = false
@@ -491,7 +494,7 @@ end
 
 local function createSection(parent, text)
 	local container = Instance.new("Frame")
-	container.Size = UDim2.new(1, 0, 0, 22)
+	container.Size = UDim2.new(1, 0, 0, 20)
 	container.BackgroundTransparency = 1
 	container.Parent = parent
 
@@ -506,16 +509,18 @@ local function createSection(parent, text)
 	label.Parent = container
 end
 
-local function createToggle(parent, text, default, callback)
+local toggleRefs = {}
+
+local function createToggle(parent, text, default, callback, settingKey)
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(1, 0, 0, 32)
+	frame.Size = UDim2.new(1, 0, 0, 30)
 	frame.BackgroundColor3 = C.card
 	frame.BorderSizePixel = 0
 	frame.Parent = parent
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 5)
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -56, 1, 0)
+	label.Size = UDim2.new(1, -54, 1, 0)
 	label.Position = UDim2.new(0, 10, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = text
@@ -526,8 +531,8 @@ local function createToggle(parent, text, default, callback)
 	label.Parent = frame
 
 	local toggleBg = Instance.new("TextButton")
-	toggleBg.Size = UDim2.new(0, 36, 0, 18)
-	toggleBg.Position = UDim2.new(1, -44, 0.5, -9)
+	toggleBg.Size = UDim2.new(0, 34, 0, 16)
+	toggleBg.Position = UDim2.new(1, -42, 0.5, -8)
 	toggleBg.BackgroundColor3 = default and C.success or Color3.fromRGB(45, 42, 55)
 	toggleBg.Text = ""
 	toggleBg.BorderSizePixel = 0
@@ -536,8 +541,8 @@ local function createToggle(parent, text, default, callback)
 	Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(1, 0)
 
 	local knob = Instance.new("Frame")
-	knob.Size = UDim2.new(0, 14, 0, 14)
-	knob.Position = default and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+	knob.Size = UDim2.new(0, 12, 0, 12)
+	knob.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
 	knob.BackgroundColor3 = C.text
 	knob.BorderSizePixel = 0
 	knob.Parent = toggleBg
@@ -548,23 +553,25 @@ local function createToggle(parent, text, default, callback)
 	frame.MouseEnter:Connect(function() tween(frame, {BackgroundColor3 = C.cardHover}) end)
 	frame.MouseLeave:Connect(function() tween(frame, {BackgroundColor3 = C.card}) end)
 
-	toggleBg.MouseButton1Click:Connect(function()
-		isOn = not isOn
+	local function setOn(on, noCallback)
+		isOn = on
 		tween(toggleBg, {BackgroundColor3 = isOn and C.success or Color3.fromRGB(45, 42, 55)})
-		tween(knob, {Position = isOn and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
-		callback(isOn)
+		tween(knob, {Position = isOn and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)})
+		if not noCallback then callback(isOn) end
+	end
+
+	toggleBg.MouseButton1Click:Connect(function()
+		setOn(not isOn)
 	end)
 
-	return {setOn = function(on)
-		isOn = on
-		toggleBg.BackgroundColor3 = isOn and C.success or Color3.fromRGB(45, 42, 55)
-		knob.Position = isOn and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-	end}
+	local ref = {setOn = setOn, getOn = function() return isOn end}
+	if settingKey then toggleRefs[settingKey] = ref end
+	return ref
 end
 
 local function createSlider(parent, text, min, max, default, callback)
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(1, 0, 0, 42)
+	frame.Size = UDim2.new(1, 0, 0, 40)
 	frame.BackgroundColor3 = C.card
 	frame.BorderSizePixel = 0
 	frame.Parent = parent
@@ -572,7 +579,7 @@ local function createSlider(parent, text, min, max, default, callback)
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.55, 0, 0, 16)
-	label.Position = UDim2.new(0, 10, 0, 4)
+	label.Position = UDim2.new(0, 10, 0, 3)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = C.text
@@ -583,7 +590,7 @@ local function createSlider(parent, text, min, max, default, callback)
 
 	local valueLabel = Instance.new("TextLabel")
 	valueLabel.Size = UDim2.new(0.45, -10, 0, 16)
-	valueLabel.Position = UDim2.new(0.55, 0, 0, 4)
+	valueLabel.Position = UDim2.new(0.55, 0, 0, 3)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.Text = tostring(math.floor(default))
 	valueLabel.TextColor3 = C.accent
@@ -594,7 +601,7 @@ local function createSlider(parent, text, min, max, default, callback)
 
 	local track = Instance.new("Frame")
 	track.Size = UDim2.new(1, -20, 0, 5)
-	track.Position = UDim2.new(0, 10, 0, 28)
+	track.Position = UDim2.new(0, 10, 0, 26)
 	track.BackgroundColor3 = Color3.fromRGB(35, 33, 45)
 	track.BorderSizePixel = 0
 	track.Parent = frame
@@ -623,8 +630,8 @@ local function createSlider(parent, text, min, max, default, callback)
 	local function update(pos)
 		local p = math.clamp(pos, 0, 1)
 		local value = min + p * (max - min)
-		tween(fill, {Size = UDim2.new(p, 0, 1, 0)}, 0.05)
-		tween(knob, {Position = UDim2.new(p, -6, 0.5, -6)}, 0.05)
+		fill.Size = UDim2.new(p, 0, 1, 0)
+		knob.Position = UDim2.new(p, -6, 0.5, -6)
 		valueLabel.Text = tostring(math.floor(value))
 		callback(value)
 	end
@@ -650,12 +657,19 @@ local function createSlider(parent, text, min, max, default, callback)
 			update((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X)
 		end
 	end)
+
+	return {setValue = function(val)
+		local p = (val - min) / (max - min)
+		fill.Size = UDim2.new(p, 0, 1, 0)
+		knob.Position = UDim2.new(p, -6, 0.5, -6)
+		valueLabel.Text = tostring(math.floor(val))
+	end}
 end
 
-local function createButton(parent, text, color, callback)
+local function createButton(parent, text, callback)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 0, 30)
-	btn.BackgroundColor3 = color or C.accent
+	btn.Size = UDim2.new(1, 0, 0, 28)
+	btn.BackgroundColor3 = C.accent
 	btn.Text = text
 	btn.TextColor3 = C.text
 	btn.TextSize = 10
@@ -669,15 +683,13 @@ local function createButton(parent, text, color, callback)
 	btn.MouseEnter:Connect(function() tween(btn, {BackgroundTransparency = 0.15}) end)
 	btn.MouseLeave:Connect(function() tween(btn, {BackgroundTransparency = 0}) end)
 	btn.MouseButton1Click:Connect(function()
-		local x = UserInputService:GetMouseLocation().X - btn.AbsolutePosition.X
-		local y = UserInputService:GetMouseLocation().Y - btn.AbsolutePosition.Y
-		ripple(btn, x, y)
+		ripple(btn, btn.AbsoluteSize.X / 2, btn.AbsoluteSize.Y / 2)
 		callback()
 	end)
 	return btn
 end
 
-local function createLocBtn(parent, loc)
+local function createKeybind(parent, text, default, callback)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1, 0, 0, 30)
 	frame.BackgroundColor3 = C.card
@@ -685,17 +697,66 @@ local function createLocBtn(parent, loc)
 	frame.Parent = parent
 	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 5)
 
+	local label = Instance.new("TextLabel", frame)
+	label.Size = UDim2.new(0.6, 0, 1, 0)
+	label.Position = UDim2.new(0, 10, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text .. ": " .. default
+	label.TextColor3 = C.text
+	label.TextSize = 10
+	label.Font = Enum.Font.GothamSemibold
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(0, 36, 0, 18)
+	btn.Position = UDim2.new(1, -44, 0.5, -9)
+	btn.BackgroundColor3 = C.accent
+	btn.Text = "Set"
+	btn.TextColor3 = C.text
+	btn.TextSize = 8
+	btn.Font = Enum.Font.GothamBold
+	btn.BorderSizePixel = 0
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+	frame.MouseEnter:Connect(function() tween(frame, {BackgroundColor3 = C.cardHover}) end)
+	frame.MouseLeave:Connect(function() tween(frame, {BackgroundColor3 = C.card}) end)
+
+	btn.MouseButton1Click:Connect(function()
+		btn.Text = "..."
+		local c
+		c = UserInputService.InputBegan:Connect(function(i, g)
+			if g then return end
+			if i.KeyCode ~= Enum.KeyCode.Unknown then
+				label.Text = text .. ": " .. i.KeyCode.Name
+				btn.Text = "Set"
+				callback(i.KeyCode.Name)
+				c:Disconnect()
+			end
+		end)
+	end)
+
+	return {setLabel = function(key) label.Text = text .. ": " .. key end}
+end
+
+local function createLocBtn(parent, loc)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 0, 28)
+	frame.BackgroundColor3 = C.card
+	frame.BorderSizePixel = 0
+	frame.Parent = parent
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 5)
+
 	local accent = Instance.new("Frame")
-	accent.Size = UDim2.new(0, 3, 0, 16)
-	accent.Position = UDim2.new(0, 6, 0.5, -8)
+	accent.Size = UDim2.new(0, 3, 0, 14)
+	accent.Position = UDim2.new(0, 6, 0.5, -7)
 	accent.BackgroundColor3 = loc.autoGrab and C.warning or C.accent
 	accent.BorderSizePixel = 0
 	accent.Parent = frame
 	Instance.new("UICorner", accent).CornerRadius = UDim.new(0, 2)
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -70, 1, 0)
-	label.Position = UDim2.new(0, 16, 0, 0)
+	label.Size = UDim2.new(1, -65, 1, 0)
+	label.Position = UDim2.new(0, 14, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = loc.name
 	label.TextColor3 = C.text
@@ -708,8 +769,8 @@ local function createLocBtn(parent, loc)
 	frame.MouseLeave:Connect(function() tween(frame, {BackgroundColor3 = C.card}) end)
 
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 42, 0, 20)
-	btn.Position = UDim2.new(1, -50, 0.5, -10)
+	btn.Size = UDim2.new(0, 40, 0, 18)
+	btn.Position = UDim2.new(1, -48, 0.5, -9)
 	btn.BackgroundColor3 = loc.autoGrab and C.warning or C.accent
 	btn.Text = loc.autoGrab and "GRAB" or "GO"
 	btn.TextColor3 = C.text
@@ -794,6 +855,31 @@ local function updateFOV()
 	Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 end
 
+local function getCurrentTeam(plr)
+	if plr and plr.Team then return plr.Team.Name end
+	return "Civilian"
+end
+
+local function getMyTeam()
+	return getCurrentTeam(player)
+end
+
+local function isInTable(tbl, val)
+	for _, v in ipairs(tbl) do if v == val then return true end end
+	return false
+end
+
+local function autoSetEspTeams()
+	if not Settings.autoTeamEsp then return end
+	local myTeam = getMyTeam()
+	for tn, _ in pairs(Settings.espTeams) do Settings.espTeams[tn] = false end
+	if isInTable(PRISONER_TEAMS, myTeam) then
+		for _, tn in ipairs(COP_TEAMS) do Settings.espTeams[tn] = true end
+	elseif isInTable(COP_TEAMS, myTeam) then
+		for _, tn in ipairs(PRISONER_TEAMS) do Settings.espTeams[tn] = true end
+	end
+end
+
 local tpFrame = createTab("Teleport")
 createSection(tpFrame, "Locations")
 for _, loc in ipairs(LOCATIONS) do createLocBtn(tpFrame, loc) end
@@ -811,13 +897,13 @@ local function refreshPlayers()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= player then
 			local f = Instance.new("Frame")
-			f.Size = UDim2.new(1, 0, 0, 30)
+			f.Size = UDim2.new(1, 0, 0, 28)
 			f.BackgroundColor3 = C.card
 			f.BorderSizePixel = 0
 			f.Parent = playerList
 			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 5)
 
-			local tn = p.Team and p.Team.Name or "Civilian"
+			local tn = getCurrentTeam(p)
 			local tc = TEAM_COLORS[tn] or C.textDim
 
 			local dot = Instance.new("Frame", f)
@@ -828,8 +914,8 @@ local function refreshPlayers()
 			Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
 			local nl = Instance.new("TextLabel", f)
-			nl.Size = UDim2.new(1, -70, 1, 0)
-			nl.Position = UDim2.new(0, 20, 0, 0)
+			nl.Size = UDim2.new(1, -65, 1, 0)
+			nl.Position = UDim2.new(0, 18, 0, 0)
 			nl.BackgroundTransparency = 1
 			nl.Text = p.Name
 			nl.TextColor3 = C.text
@@ -841,8 +927,8 @@ local function refreshPlayers()
 			f.MouseLeave:Connect(function() tween(f, {BackgroundColor3 = C.card}) end)
 
 			local tb = Instance.new("TextButton", f)
-			tb.Size = UDim2.new(0, 36, 0, 20)
-			tb.Position = UDim2.new(1, -44, 0.5, -10)
+			tb.Size = UDim2.new(0, 32, 0, 18)
+			tb.Position = UDim2.new(1, -40, 0.5, -9)
 			tb.BackgroundColor3 = C.accent
 			tb.Text = "TP"
 			tb.TextColor3 = C.text
@@ -860,23 +946,37 @@ local function refreshPlayers()
 	end
 end
 createSection(playersFrame, "Online Players")
-createButton(playersFrame, "Refresh List", Color3.fromRGB(40, 38, 52), refreshPlayers)
+createButton(playersFrame, "Refresh List", refreshPlayers)
 refreshPlayers()
 
-local moveFrame = createTab("Movement")
-createSection(moveFrame, "Movement Hacks")
-createToggle(moveFrame, "Bhop", Settings.bhop, function(on) Settings.bhop = on saveSettings() end)
-createToggle(moveFrame, "Infinite Jump", Settings.infJump, function(on) Settings.infJump = on saveSettings() end)
-createToggle(moveFrame, "Infinite Stamina", Settings.infStamina, function(on) Settings.infStamina = on saveSettings() end)
-createToggle(moveFrame, "Fly", Settings.fly, function(on) Settings.fly = on saveSettings() end)
-createToggle(moveFrame, "Noclip", Settings.noclip, function(on) Settings.noclip = on saveSettings() end)
-createSection(moveFrame, "Speed Settings")
-createSlider(moveFrame, "Fly Speed", 10, 200, Settings.flySpeed, function(v) Settings.flySpeed = v end)
-createSlider(moveFrame, "Walk Speed", 16, 100, Settings.walkSpeed, function(v)
+local mainFrame = createTab("Main")
+createSection(mainFrame, "Movement")
+createToggle(mainFrame, "Noclip", Settings.noclip, function(on) Settings.noclip = on saveSettings() end)
+createToggle(mainFrame, "Fly", Settings.fly, function(on) Settings.fly = on saveSettings() end)
+createToggle(mainFrame, "Infinite Jump", Settings.infJump, function(on) Settings.infJump = on saveSettings() end)
+createToggle(mainFrame, "Infinite Stamina", Settings.infStamina, function(on) Settings.infStamina = on saveSettings() end)
+createToggle(mainFrame, "Bhop", Settings.bhop, function(on) Settings.bhop = on saveSettings() end)
+createToggle(mainFrame, "CFrame Walk", Settings.cframeWalk, function(on) Settings.cframeWalk = on saveSettings() end)
+createSlider(mainFrame, "CFrame Speed", 0.5, 5, Settings.cframeSpeed, function(v) Settings.cframeSpeed = v end)
+
+createSection(mainFrame, "Anti-Cop")
+createToggle(mainFrame, "No Stun", Settings.noStun, function(on) Settings.noStun = on saveSettings() end)
+createToggle(mainFrame, "No Pepper Effect", Settings.noPepper, function(on) Settings.noPepper = on saveSettings() end)
+createToggle(mainFrame, "Anti Cuff", Settings.antiCuff, function(on) Settings.antiCuff = on saveSettings() end)
+
+createSection(mainFrame, "Fun")
+createToggle(mainFrame, "Spinbot", Settings.spinbot, function(on) Settings.spinbot = on saveSettings() end)
+createSlider(mainFrame, "Spin Speed", 1, 50, Settings.spinSpeed, function(v) Settings.spinSpeed = v end)
+createToggle(mainFrame, "Desync", Settings.desync, function(on) Settings.desync = on saveSettings() end)
+createToggle(mainFrame, "Auto Pickup", Settings.autoPickup, function(on) Settings.autoPickup = on saveSettings() end)
+
+createSection(mainFrame, "Speed Settings")
+createSlider(mainFrame, "Fly Speed", 10, 200, Settings.flySpeed, function(v) Settings.flySpeed = v end)
+createSlider(mainFrame, "Walk Speed", 16, 100, Settings.walkSpeed, function(v)
 	Settings.walkSpeed = v
 	if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end
 end)
-createSlider(moveFrame, "Jump Power", 50, 200, Settings.jumpPower, function(v)
+createSlider(mainFrame, "Jump Power", 50, 200, Settings.jumpPower, function(v)
 	Settings.jumpPower = v
 	if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end
 end)
@@ -899,6 +999,24 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 		for _, p in pairs(c:GetDescendants()) do
 			if p:IsA("BasePart") then p.CanCollide = false end
 		end
+	end
+
+	if Settings.noStun then
+		local stun = c:FindFirstChild("Stun") or c:FindFirstChild("Stunned")
+		if stun then pcall(function() stun:Destroy() end) end
+		if hum.WalkSpeed < 10 then hum.WalkSpeed = Settings.walkSpeed end
+	end
+
+	if Settings.noPepper then
+		for _, v in pairs(c:GetDescendants()) do
+			if v.Name:lower():find("pepper") then pcall(function() v:Destroy() end) end
+		end
+	end
+
+	if Settings.antiCuff then
+		if hum.PlatformStand then hum.PlatformStand = false end
+		local cuffs = c:FindFirstChild("Cuffs") or c:FindFirstChild("Handcuffs")
+		if cuffs then pcall(function() cuffs:Destroy() end) end
 	end
 
 	if Settings.fly then
@@ -932,6 +1050,22 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 	if Settings.spinbot then
 		hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(Settings.spinSpeed), 0)
 	end
+
+	if Settings.cframeWalk then
+		local cam = workspace.CurrentCamera
+		local moveDir = Vector3.zero
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+		if moveDir.Magnitude > 0 then
+			hrp.CFrame = hrp.CFrame + (moveDir.Unit * Settings.cframeSpeed)
+		end
+	end
+
+	if Settings.desync then
+		hrp.Velocity = Vector3.new(0, 0, 0)
+	end
 end))
 
 table.insert(connections, UserInputService.JumpRequest:Connect(function()
@@ -946,20 +1080,32 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
 			player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
 	end
+	if Settings.autoPickup then
+		local c = player.Character
+		if c and c:FindFirstChild("HumanoidRootPart") then
+			for _, v in pairs(workspace:GetDescendants()) do
+				if v:IsA("ProximityPrompt") and v.Parent and v.Parent:IsA("BasePart") then
+					if (v.Parent.Position - c.HumanoidRootPart.Position).Magnitude < 8 then
+						pcall(fireproximityprompt, v)
+					end
+				end
+			end
+		end
+	end
 end))
 
 local espFrame = createTab("ESP")
 
 local espPreview = Instance.new("Frame")
-espPreview.Size = UDim2.new(1, 0, 0, 80)
+espPreview.Size = UDim2.new(1, 0, 0, 70)
 espPreview.BackgroundColor3 = C.card
 espPreview.BorderSizePixel = 0
 espPreview.Parent = espFrame
 Instance.new("UICorner", espPreview).CornerRadius = UDim.new(0, 6)
 
 local previewLabel = Instance.new("TextLabel")
-previewLabel.Size = UDim2.new(1, 0, 0, 16)
-previewLabel.Position = UDim2.new(0, 0, 0, 4)
+previewLabel.Size = UDim2.new(1, 0, 0, 14)
+previewLabel.Position = UDim2.new(0, 0, 0, 3)
 previewLabel.BackgroundTransparency = 1
 previewLabel.Text = "PREVIEW"
 previewLabel.TextColor3 = C.textDim
@@ -968,8 +1114,8 @@ previewLabel.Font = Enum.Font.GothamBold
 previewLabel.Parent = espPreview
 
 local previewBox = Instance.new("Frame")
-previewBox.Size = UDim2.new(0, 36, 0, 48)
-previewBox.Position = UDim2.new(0.5, -18, 0.5, -16)
+previewBox.Size = UDim2.new(0, 30, 0, 40)
+previewBox.Position = UDim2.new(0.5, -15, 0.5, -12)
 previewBox.BackgroundTransparency = 1
 previewBox.Parent = espPreview
 
@@ -981,38 +1127,38 @@ Instance.new("UIStroke", pOutline).Color = C.danger
 Instance.new("UICorner", pOutline).CornerRadius = UDim.new(0, 3)
 
 local pName = Instance.new("TextLabel", previewBox)
-pName.Size = UDim2.new(0, 60, 0, 10)
-pName.Position = UDim2.new(0.5, -30, 0, -14)
+pName.Size = UDim2.new(0, 50, 0, 9)
+pName.Position = UDim2.new(0.5, -25, 0, -12)
 pName.BackgroundTransparency = 1
 pName.Text = "Player"
 pName.TextColor3 = C.text
-pName.TextSize = 8
+pName.TextSize = 7
 pName.Font = Enum.Font.GothamBold
 pName.Visible = false
 
 local pTeam = Instance.new("TextLabel", previewBox)
-pTeam.Size = UDim2.new(0, 60, 0, 8)
-pTeam.Position = UDim2.new(0.5, -30, 0, -4)
+pTeam.Size = UDim2.new(0, 50, 0, 7)
+pTeam.Position = UDim2.new(0.5, -25, 0, -3)
 pTeam.BackgroundTransparency = 1
 pTeam.Text = "Escapee"
 pTeam.TextColor3 = C.warning
-pTeam.TextSize = 7
+pTeam.TextSize = 6
 pTeam.Font = Enum.Font.GothamSemibold
 pTeam.Visible = false
 
 local pDist = Instance.new("TextLabel", previewBox)
-pDist.Size = UDim2.new(0, 60, 0, 8)
-pDist.Position = UDim2.new(0.5, -30, 1, 2)
+pDist.Size = UDim2.new(0, 50, 0, 7)
+pDist.Position = UDim2.new(0.5, -25, 1, 2)
 pDist.BackgroundTransparency = 1
 pDist.Text = "[45m]"
 pDist.TextColor3 = C.textDim
-pDist.TextSize = 7
+pDist.TextSize = 6
 pDist.Font = Enum.Font.Gotham
 pDist.Visible = false
 
 local pHealthBg = Instance.new("Frame", previewBox)
-pHealthBg.Size = UDim2.new(0, 30, 0, 3)
-pHealthBg.Position = UDim2.new(0.5, -15, 1, 12)
+pHealthBg.Size = UDim2.new(0, 24, 0, 2)
+pHealthBg.Position = UDim2.new(0.5, -12, 1, 10)
 pHealthBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 pHealthBg.BorderSizePixel = 0
 pHealthBg.Visible = false
@@ -1024,19 +1170,20 @@ pHealthFill.BackgroundColor3 = C.success
 pHealthFill.BorderSizePixel = 0
 Instance.new("UICorner", pHealthFill).CornerRadius = UDim.new(1, 0)
 
+local pTracer = Instance.new("Frame", espPreview)
+pTracer.Size = UDim2.new(0, 1, 0, 15)
+pTracer.Position = UDim2.new(0.5, 0, 1, -20)
+pTracer.BackgroundColor3 = C.danger
+pTracer.BorderSizePixel = 0
+pTracer.Visible = false
+
 local function updatePreview()
 	pName.Visible = Settings.showName
 	pTeam.Visible = Settings.showTeam
 	pDist.Visible = Settings.showDistance
 	pHealthBg.Visible = Settings.showHealth
 	pOutline.Visible = Settings.showBox
-end
-
-local function getCurrentTeam(plr)
-	if plr and plr.Team then
-		return plr.Team.Name
-	end
-	return "Civilian"
+	pTracer.Visible = Settings.showTracer
 end
 
 local function updateESP(plr)
@@ -1045,6 +1192,7 @@ local function updateESP(plr)
 	if not c then return end
 	local head = c:FindFirstChild("Head")
 	local hum = c:FindFirstChild("Humanoid")
+	local hrp = c:FindFirstChild("HumanoidRootPart")
 	if not head then return end
 
 	local currentTeam = getCurrentTeam(plr)
@@ -1053,8 +1201,10 @@ local function updateESP(plr)
 
 	local old = head:FindFirstChild("PhantomESP")
 	local oldH = c:FindFirstChild("PhantomHL")
+	local oldT = c:FindFirstChild("PhantomTracer")
 	if old then old:Destroy() end
 	if oldH then oldH:Destroy() end
+	if oldT then oldT:Destroy() end
 	if not show then return end
 
 	local bb = Instance.new("BillboardGui", head)
@@ -1100,6 +1250,22 @@ local function updateESP(plr)
 		l.Font = Enum.Font.Gotham
 		l.TextStrokeTransparency = 0
 		y = y + 9
+	end
+	if Settings.showTool then
+		local tool = c:FindFirstChildOfClass("Tool")
+		if tool then
+			local l = Instance.new("TextLabel", bb)
+			l.Name = "Tool"
+			l.Size = UDim2.new(1, 0, 0, 8)
+			l.Position = UDim2.new(0, 0, 0, y)
+			l.BackgroundTransparency = 1
+			l.Text = "[" .. tool.Name .. "]"
+			l.TextColor3 = C.warning
+			l.TextSize = 7
+			l.Font = Enum.Font.Gotham
+			l.TextStrokeTransparency = 0
+			y = y + 8
+		end
 	end
 	if Settings.showHealth and hum then
 		local bg = Instance.new("Frame", bb)
@@ -1159,25 +1325,39 @@ local function startESPLoop()
 					end
 				end
 			end
-			task.wait(0.15)
+			task.wait(0.1)
 		end
 		espLoop = nil
 	end)
 end
 
 createSection(espFrame, "Main Settings")
-createToggle(espFrame, "Enable ESP", Settings.espEnabled, function(on)
+local espToggle = createToggle(espFrame, "Enable ESP", Settings.espEnabled, function(on)
 	Settings.espEnabled = on
-	if on then startESPLoop() else clearESP() end
+	if on then
+		autoSetEspTeams()
+		refreshESP()
+		startESPLoop()
+	else
+		clearESP()
+	end
+	saveSettings()
+end, "espEnabled")
+
+createToggle(espFrame, "Auto Team ESP", Settings.autoTeamEsp, function(on)
+	Settings.autoTeamEsp = on
+	if on and Settings.espEnabled then autoSetEspTeams() refreshESP() end
 	saveSettings()
 end)
 
 createSection(espFrame, "Display Options")
-createToggle(espFrame, "Show Name", Settings.showName, function(on) Settings.showName = on refreshESP() saveSettings() end)
-createToggle(espFrame, "Show Team", Settings.showTeam, function(on) Settings.showTeam = on refreshESP() saveSettings() end)
-createToggle(espFrame, "Show Distance", Settings.showDistance, function(on) Settings.showDistance = on refreshESP() saveSettings() end)
-createToggle(espFrame, "Show Health", Settings.showHealth, function(on) Settings.showHealth = on refreshESP() saveSettings() end)
-createToggle(espFrame, "Show Box", Settings.showBox, function(on) Settings.showBox = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Name ESP", Settings.showName, function(on) Settings.showName = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Team ESP", Settings.showTeam, function(on) Settings.showTeam = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Distance ESP", Settings.showDistance, function(on) Settings.showDistance = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Health ESP", Settings.showHealth, function(on) Settings.showHealth = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Box ESP", Settings.showBox, function(on) Settings.showBox = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Tracer ESP", Settings.showTracer, function(on) Settings.showTracer = on refreshESP() saveSettings() end)
+createToggle(espFrame, "Tool ESP", Settings.showTool, function(on) Settings.showTool = on refreshESP() saveSettings() end)
 
 createSection(espFrame, "Target Teams")
 for _, tn in ipairs(TARGET_TEAMS) do
@@ -1195,30 +1375,20 @@ table.insert(connections, Players.PlayerAdded:Connect(function(p)
 end))
 table.insert(connections, Players.PlayerRemoving:Connect(refreshPlayers))
 
+table.insert(connections, player:GetPropertyChangedSignal("Team"):Connect(function()
+	if Settings.autoTeamEsp and Settings.espEnabled then
+		autoSetEspTeams()
+		refreshESP()
+	end
+end))
+
 updatePreview()
 
-local aimFrame = createTab("Aimbot")
+local aimFrame = createTab("Combat")
 
 local aimKey = Enum.KeyCode[Settings.aimHoldKey] or Enum.KeyCode.Q
 local holding = false
 local sticky = nil
-
-local function visible(part)
-	if not Settings.wallCheck then return true end
-	local mc = player.Character
-	if not mc then return false end
-	local mh = mc:FindFirstChild("Head")
-	if not mh then return false end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {mc}
-	local result = workspace:Raycast(mh.Position, (part.Position - mh.Position), params)
-	if result then
-		local tc = part:FindFirstAncestorOfClass("Model")
-		return tc and result.Instance:IsDescendantOf(tc)
-	end
-	return true
-end
 
 local function getTarget()
 	if Settings.stickyAim and sticky then
@@ -1226,7 +1396,32 @@ local function getTarget()
 		if c then
 			local h = c:FindFirstChild("Humanoid")
 			local p = c:FindFirstChild(Settings.aimPart) or c:FindFirstChild("Head")
-			if h and h.Health > 0 and p and visible(p) then return p end
+			local hrp = c:FindFirstChild("HumanoidRootPart")
+			if h and h.Health > 0 and p and hrp then
+				local currentTeam = getCurrentTeam(sticky)
+				if Settings.aimTeams[currentTeam] then
+					if Settings.wallCheck then
+						local mc = player.Character
+						if mc then
+							local mh = mc:FindFirstChild("Head")
+							if mh then
+								local params = RaycastParams.new()
+								params.FilterType = Enum.RaycastFilterType.Exclude
+								params.FilterDescendantsInstances = {mc}
+								local result = workspace:Raycast(mh.Position, (p.Position - mh.Position), params)
+								if result then
+									local tc = p:FindFirstAncestorOfClass("Model")
+									if tc and result.Instance:IsDescendantOf(tc) then return p end
+								else
+									return p
+								end
+							end
+						end
+					else
+						return p
+					end
+				end
+			end
 		end
 		sticky = nil
 	end
@@ -1235,6 +1430,7 @@ local function getTarget()
 	local mc = player.Character
 	if not cam or not mc or not mc:FindFirstChild("HumanoidRootPart") then return nil end
 	local mp = mc.HumanoidRootPart.Position
+	local mHead = mc:FindFirstChild("Head")
 	local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
 	local closest, closestP, closestD = nil, nil, math.huge
 
@@ -1247,14 +1443,30 @@ local function getTarget()
 				local h = c:FindFirstChild("Humanoid")
 				if hrp and h and h.Health > 0 then
 					local part = c:FindFirstChild(Settings.aimPart) or c:FindFirstChild("Head")
-					if part and visible(part) and (hrp.Position - mp).Magnitude <= 200 then
-						local sp, os = cam:WorldToScreenPoint(part.Position)
-						if os then
-							local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-							if sd <= Settings.fovSize and sd < closestD then
-								closestD = sd
-								closest = part
-								closestP = p
+					if part then
+						local dist = (hrp.Position - mp).Magnitude
+						if dist <= 500 then
+							local canSee = true
+							if Settings.wallCheck and mHead then
+								local params = RaycastParams.new()
+								params.FilterType = Enum.RaycastFilterType.Exclude
+								params.FilterDescendantsInstances = {mc}
+								local result = workspace:Raycast(mHead.Position, (part.Position - mHead.Position), params)
+								if result then
+									local tc = part:FindFirstAncestorOfClass("Model")
+									if not (tc and result.Instance:IsDescendantOf(tc)) then canSee = false end
+								end
+							end
+							if canSee then
+								local sp, os = cam:WorldToScreenPoint(part.Position)
+								if os then
+									local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+									if sd <= Settings.fovSize and sd < closestD then
+										closestD = sd
+										closest = part
+										closestP = p
+									end
+								end
 							end
 						end
 					end
@@ -1273,6 +1485,9 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 	end
 	local cam = workspace.CurrentCamera
 	if not cam then return end
+	if Settings.hitChance < 100 then
+		if math.random(1, 100) > Settings.hitChance then return end
+	end
 	local t = getTarget()
 	if t then cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(cam.CFrame.Position, t.Position), Settings.aimSmoothness) end
 end))
@@ -1285,59 +1500,23 @@ table.insert(connections, UserInputService.InputEnded:Connect(function(i)
 	if i.KeyCode == aimKey then holding = false end
 end))
 
-createSection(aimFrame, "Main Settings")
-createToggle(aimFrame, "Enable Aimbot", Settings.aimEnabled, function(on) Settings.aimEnabled = on updateFOV() saveSettings() end)
-createToggle(aimFrame, "Show FOV Circle", Settings.showFOV, function(on) Settings.showFOV = on updateFOV() saveSettings() end)
+createSection(aimFrame, "Aimbot")
+local aimToggle = createToggle(aimFrame, "Aimbot", Settings.aimEnabled, function(on) Settings.aimEnabled = on updateFOV() saveSettings() end, "aimEnabled")
+local fovToggle = createToggle(aimFrame, "Show FOV", Settings.showFOV, function(on) Settings.showFOV = on updateFOV() saveSettings() end, "showFOV")
 createToggle(aimFrame, "Wall Check", Settings.wallCheck, function(on) Settings.wallCheck = on saveSettings() end)
 createToggle(aimFrame, "Sticky Aim", Settings.stickyAim, function(on) Settings.stickyAim = on sticky = nil saveSettings() end)
+createToggle(aimFrame, "Triggerbot", Settings.triggerbot, function(on) Settings.triggerbot = on saveSettings() end)
 
 createSection(aimFrame, "Aim Settings")
 createSlider(aimFrame, "Smoothness", 5, 100, Settings.aimSmoothness * 100, function(v) Settings.aimSmoothness = v / 100 end)
-createSlider(aimFrame, "FOV Size", 30, 300, Settings.fovSize, function(v) Settings.fovSize = v updateFOV() end)
+local fovSlider = createSlider(aimFrame, "FOV Size", 30, 300, Settings.fovSize, function(v) Settings.fovSize = v updateFOV() end)
+createSlider(aimFrame, "Hit Chance", 1, 100, Settings.hitChance, function(v) Settings.hitChance = v end)
 
-createSection(aimFrame, "Hold Key")
-local hkFrame = Instance.new("Frame")
-hkFrame.Size = UDim2.new(1, 0, 0, 32)
-hkFrame.BackgroundColor3 = C.card
-hkFrame.BorderSizePixel = 0
-hkFrame.Parent = aimFrame
-Instance.new("UICorner", hkFrame).CornerRadius = UDim.new(0, 5)
-
-local hkLabel = Instance.new("TextLabel", hkFrame)
-hkLabel.Size = UDim2.new(0.6, 0, 1, 0)
-hkLabel.Position = UDim2.new(0, 10, 0, 0)
-hkLabel.BackgroundTransparency = 1
-hkLabel.Text = "Hold: " .. Settings.aimHoldKey
-hkLabel.TextColor3 = C.text
-hkLabel.TextSize = 10
-hkLabel.Font = Enum.Font.GothamSemibold
-hkLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local hkBtn = Instance.new("TextButton", hkFrame)
-hkBtn.Size = UDim2.new(0, 40, 0, 20)
-hkBtn.Position = UDim2.new(1, -48, 0.5, -10)
-hkBtn.BackgroundColor3 = C.accent
-hkBtn.Text = "Set"
-hkBtn.TextColor3 = C.text
-hkBtn.TextSize = 8
-hkBtn.Font = Enum.Font.GothamBold
-hkBtn.BorderSizePixel = 0
-Instance.new("UICorner", hkBtn).CornerRadius = UDim.new(0, 4)
-
-hkBtn.MouseButton1Click:Connect(function()
-	hkBtn.Text = "..."
-	local c
-	c = UserInputService.InputBegan:Connect(function(i, g)
-		if g then return end
-		if i.KeyCode ~= Enum.KeyCode.Unknown then
-			aimKey = i.KeyCode
-			Settings.aimHoldKey = i.KeyCode.Name
-			hkLabel.Text = "Hold: " .. i.KeyCode.Name
-			hkBtn.Text = "Set"
-			c:Disconnect()
-			saveSettings()
-		end
-	end)
+createSection(aimFrame, "Keybind")
+createKeybind(aimFrame, "Aimbot Key", Settings.aimHoldKey, function(key)
+	aimKey = Enum.KeyCode[key]
+	Settings.aimHoldKey = key
+	saveSettings()
 end)
 
 createSection(aimFrame, "Target Teams")
@@ -1345,20 +1524,53 @@ for _, tn in ipairs(TARGET_TEAMS) do
 	createToggle(aimFrame, tn, Settings.aimTeams[tn], function(on) Settings.aimTeams[tn] = on saveSettings() end)
 end
 
+table.insert(connections, RunService.Heartbeat:Connect(function()
+	if not Settings.triggerbot then return end
+	local cam = workspace.CurrentCamera
+	local mc = player.Character
+	if not cam or not mc then return end
+	local ray = cam:ViewportPointToRay(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {mc}
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	if result then
+		local char = result.Instance:FindFirstAncestorOfClass("Model")
+		if char then
+			local plr = Players:GetPlayerFromCharacter(char)
+			if plr and plr ~= player then
+				local tn = getCurrentTeam(plr)
+				if Settings.aimTeams[tn] then
+					local tool = mc:FindFirstChildOfClass("Tool")
+					if tool then
+						local click = tool:FindFirstChild("Click") or tool:FindFirstChild("Fire") or tool:FindFirstChild("Activate")
+						if click then pcall(function() click:FireServer() end) end
+					end
+				end
+			end
+		end
+	end
+end))
+
 local gunFrame = createTab("Guns")
 createSection(gunFrame, "Gun Mods")
 createToggle(gunFrame, "No Recoil", Settings.noRecoil, function(on) Settings.noRecoil = on saveSettings() end)
 createToggle(gunFrame, "No Spread", Settings.noSpread, function(on) Settings.noSpread = on saveSettings() end)
+createSlider(gunFrame, "Recoil Amount", 0, 100, Settings.recoilAmount, function(v) Settings.recoilAmount = v end)
+createSlider(gunFrame, "Spread Amount", 0, 100, Settings.spreadAmount, function(v) Settings.spreadAmount = v end)
 
 table.insert(connections, RunService.RenderStepped:Connect(function()
-	if not Settings.noRecoil and not Settings.noSpread then return end
 	local c = player.Character
 	if not c then return end
 	for _, t in pairs(c:GetChildren()) do
 		if t:IsA("Tool") then
 			for _, d in pairs(t:GetDescendants()) do
-				if Settings.noRecoil and d.Name:lower():find("recoil") and (d:IsA("NumberValue") or d:IsA("IntValue")) then d.Value = 0 end
-				if Settings.noSpread and (d.Name:lower():find("spread") or d.Name:lower():find("accuracy")) and (d:IsA("NumberValue") or d:IsA("IntValue")) then d.Value = 0 end
+				if d.Name:lower():find("recoil") and (d:IsA("NumberValue") or d:IsA("IntValue")) then
+					if Settings.noRecoil then d.Value = 0 else d.Value = Settings.recoilAmount end
+				end
+				if (d.Name:lower():find("spread") or d.Name:lower():find("accuracy")) and (d:IsA("NumberValue") or d:IsA("IntValue")) then
+					if Settings.noSpread then d.Value = 0 else d.Value = Settings.spreadAmount end
+				end
 			end
 		end
 	end
@@ -1385,10 +1597,32 @@ createToggle(visualFrame, "No Fog", Settings.noFog, function(on)
 	saveSettings()
 end)
 
+createSection(visualFrame, "Atmosphere")
+createSlider(visualFrame, "Fog Density", 0, 100, Settings.fogDensity, function(v)
+	Settings.fogDensity = v
+	local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmo then atmo.Density = v / 100 end
+end)
+createSlider(visualFrame, "Contrast", -100, 100, Settings.contrast, function(v)
+	Settings.contrast = v
+	local cc = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if cc then cc.Contrast = v / 100 end
+end)
+createSlider(visualFrame, "Saturation", -100, 100, Settings.saturation, function(v)
+	Settings.saturation = v
+	local cc = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if cc then cc.Saturation = v / 100 end
+end)
+
 createSection(visualFrame, "Camera")
 createSlider(visualFrame, "Field of View", 30, 120, Settings.fov, function(v)
 	Settings.fov = v
 	workspace.CurrentCamera.FieldOfView = v
+end)
+createToggle(visualFrame, "Infinite Zoom", Settings.infZoom, function(on)
+	Settings.infZoom = on
+	player.CameraMaxZoomDistance = on and 9999 or 128
+	saveSettings()
 end)
 
 createSection(visualFrame, "Crosshair")
@@ -1415,71 +1649,52 @@ createToggle(visualFrame, "Enable Crosshair", Settings.crosshairEnabled, functio
 	saveSettings()
 end)
 
-local setFrame = createTab("Settings")
+local configFrame = createTab("Config")
+createSection(configFrame, "Modules")
+createToggle(configFrame, "Chat Logs", Settings.chatLogs, function(on) Settings.chatLogs = on saveSettings() end)
+createToggle(configFrame, "Join Logs", Settings.joinLogs, function(on) Settings.joinLogs = on saveSettings() end)
 
-createSection(setFrame, "GUI Keybind")
-local tkFrame = Instance.new("Frame")
-tkFrame.Size = UDim2.new(1, 0, 0, 32)
-tkFrame.BackgroundColor3 = C.card
-tkFrame.BorderSizePixel = 0
-tkFrame.Parent = setFrame
-Instance.new("UICorner", tkFrame).CornerRadius = UDim.new(0, 5)
-
-local tkLabel = Instance.new("TextLabel", tkFrame)
-tkLabel.Size = UDim2.new(0.6, 0, 1, 0)
-tkLabel.Position = UDim2.new(0, 10, 0, 0)
-tkLabel.BackgroundTransparency = 1
-tkLabel.Text = "Toggle: " .. Settings.toggleGuiKey
-tkLabel.TextColor3 = C.text
-tkLabel.TextSize = 10
-tkLabel.Font = Enum.Font.GothamSemibold
-tkLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local tkBtn = Instance.new("TextButton", tkFrame)
-tkBtn.Size = UDim2.new(0, 40, 0, 20)
-tkBtn.Position = UDim2.new(1, -48, 0.5, -10)
-tkBtn.BackgroundColor3 = C.accent
-tkBtn.Text = "Set"
-tkBtn.TextColor3 = C.text
-tkBtn.TextSize = 8
-tkBtn.Font = Enum.Font.GothamBold
-tkBtn.BorderSizePixel = 0
-Instance.new("UICorner", tkBtn).CornerRadius = UDim.new(0, 4)
-
-tkBtn.MouseButton1Click:Connect(function()
-	tkBtn.Text = "..."
-	local c
-	c = UserInputService.InputBegan:Connect(function(i, g)
-		if g then return end
-		if i.KeyCode ~= Enum.KeyCode.Unknown then
-			Settings.toggleGuiKey = i.KeyCode.Name
-			tkLabel.Text = "Toggle: " .. i.KeyCode.Name
-			tkBtn.Text = "Set"
-			c:Disconnect()
-			saveSettings()
-		end
-	end)
+createSection(configFrame, "Keybinds")
+createKeybind(configFrame, "Toggle GUI", Settings.toggleGuiKey, function(key)
+	Settings.toggleGuiKey = key
+	saveSettings()
+end)
+createKeybind(configFrame, "Toggle ESP", Settings.toggleEspKey, function(key)
+	Settings.toggleEspKey = key
+	saveSettings()
 end)
 
-createSection(setFrame, "Actions")
-createButton(setFrame, "Save Settings", C.success, saveSettings)
-createButton(setFrame, "Reset Character", C.warning, function()
+createSection(configFrame, "Save / Load")
+createButton(configFrame, "Save Config", saveSettings)
+createButton(configFrame, "Reset Character", function()
 	if player.Character then player.Character:BreakJoints() end
 end)
-createButton(setFrame, "Destroy GUI", C.danger, destroyGui)
+createButton(configFrame, "Destroy GUI", destroyGui)
+
+table.insert(connections, Players.PlayerAdded:Connect(function(p)
+	if Settings.joinLogs then
+		print("[JOIN] " .. p.Name .. " joined the server")
+	end
+end))
+
+table.insert(connections, Players.PlayerRemoving:Connect(function(p)
+	if Settings.joinLogs then
+		print("[LEAVE] " .. p.Name .. " left the server")
+	end
+end))
 
 local credFrame = createTab("Credits")
 
 local credCard = Instance.new("Frame")
-credCard.Size = UDim2.new(1, 0, 0, 160)
+credCard.Size = UDim2.new(1, 0, 0, 140)
 credCard.BackgroundColor3 = C.card
 credCard.BorderSizePixel = 0
 credCard.Parent = credFrame
 Instance.new("UICorner", credCard).CornerRadius = UDim.new(0, 8)
 
 local credLogo = Instance.new("Frame")
-credLogo.Size = UDim2.new(0, 50, 0, 50)
-credLogo.Position = UDim2.new(0.5, -25, 0, 15)
+credLogo.Size = UDim2.new(0, 45, 0, 45)
+credLogo.Position = UDim2.new(0.5, -22, 0, 12)
 credLogo.BackgroundColor3 = C.accent
 credLogo.BorderSizePixel = 0
 credLogo.Parent = credCard
@@ -1490,50 +1705,50 @@ credLogoText.Size = UDim2.new(1, 0, 1, 0)
 credLogoText.BackgroundTransparency = 1
 credLogoText.Text = "P"
 credLogoText.TextColor3 = C.text
-credLogoText.TextSize = 24
+credLogoText.TextSize = 22
 credLogoText.Font = Enum.Font.GothamBlack
 
 local credTitle = Instance.new("TextLabel", credCard)
-credTitle.Size = UDim2.new(1, 0, 0, 20)
-credTitle.Position = UDim2.new(0, 0, 0, 70)
+credTitle.Size = UDim2.new(1, 0, 0, 18)
+credTitle.Position = UDim2.new(0, 0, 0, 62)
 credTitle.BackgroundTransparency = 1
 credTitle.Text = "PHANTOM"
 credTitle.TextColor3 = C.text
-credTitle.TextSize = 16
+credTitle.TextSize = 14
 credTitle.Font = Enum.Font.GothamBlack
 
 local credVer = Instance.new("TextLabel", credCard)
-credVer.Size = UDim2.new(1, 0, 0, 14)
-credVer.Position = UDim2.new(0, 0, 0, 88)
+credVer.Size = UDim2.new(1, 0, 0, 12)
+credVer.Position = UDim2.new(0, 0, 0, 78)
 credVer.BackgroundTransparency = 1
-credVer.Text = "v6.0 Premium"
+credVer.Text = "v7.0 Premium"
 credVer.TextColor3 = C.textDim
-credVer.TextSize = 10
+credVer.TextSize = 9
 credVer.Font = Enum.Font.GothamSemibold
 
 local credDiv = Instance.new("Frame", credCard)
 credDiv.Size = UDim2.new(0.4, 0, 0, 1)
-credDiv.Position = UDim2.new(0.3, 0, 0, 110)
+credDiv.Position = UDim2.new(0.3, 0, 0, 98)
 credDiv.BackgroundColor3 = C.accent
 credDiv.BackgroundTransparency = 0.5
 credDiv.BorderSizePixel = 0
 
 local credRole = Instance.new("TextLabel", credCard)
-credRole.Size = UDim2.new(1, 0, 0, 12)
-credRole.Position = UDim2.new(0, 0, 0, 118)
+credRole.Size = UDim2.new(1, 0, 0, 10)
+credRole.Position = UDim2.new(0, 0, 0, 105)
 credRole.BackgroundTransparency = 1
 credRole.Text = "Developer"
 credRole.TextColor3 = C.textDim
-credRole.TextSize = 9
+credRole.TextSize = 8
 credRole.Font = Enum.Font.Gotham
 
 local credName = Instance.new("TextLabel", credCard)
-credName.Size = UDim2.new(1, 0, 0, 20)
-credName.Position = UDim2.new(0, 0, 0, 132)
+credName.Size = UDim2.new(1, 0, 0, 16)
+credName.Position = UDim2.new(0, 0, 0, 118)
 credName.BackgroundTransparency = 1
 credName.Text = "Mishka"
 credName.TextColor3 = C.accentLight
-credName.TextSize = 14
+credName.TextSize = 12
 credName.Font = Enum.Font.GothamBold
 
 table.insert(connections, UserInputService.InputBegan:Connect(function(i, g)
@@ -1541,8 +1756,60 @@ table.insert(connections, UserInputService.InputBegan:Connect(function(i, g)
 	if i.KeyCode.Name == Settings.toggleGuiKey then
 		main.Visible = not main.Visible
 	end
+	if i.KeyCode.Name == Settings.toggleEspKey then
+		Settings.espEnabled = not Settings.espEnabled
+		if toggleRefs["espEnabled"] then toggleRefs["espEnabled"].setOn(Settings.espEnabled, true) end
+		if Settings.espEnabled then
+			autoSetEspTeams()
+			refreshESP()
+			startESPLoop()
+		else
+			clearESP()
+		end
+		saveSettings()
+	end
 end))
 
 tabs["Teleport"].btn.MouseButton1Click:Fire()
 
-print("PHANTOM v6.0 by Mishka | Press " .. Settings.toggleGuiKey .. " to toggle")
+task.defer(function()
+	if Settings.espEnabled then
+		autoSetEspTeams()
+		startESPLoop()
+		refreshESP()
+	end
+	if Settings.showFOV and Settings.aimEnabled then
+		updateFOV()
+	end
+	if Settings.crosshairEnabled then
+		local old = gui:FindFirstChild("Crosshair")
+		if old then old:Destroy() end
+		local cg = Instance.new("ScreenGui", gui)
+		cg.Name = "Crosshair"
+		local col = Color3.fromRGB(Settings.crosshairColor[1], Settings.crosshairColor[2], Settings.crosshairColor[3])
+		for _, d in ipairs({
+			{UDim2.new(0, 2, 0, 10), UDim2.new(0.5, -1, 0.5, -16)},
+			{UDim2.new(0, 2, 0, 10), UDim2.new(0.5, -1, 0.5, 6)},
+			{UDim2.new(0, 10, 0, 2), UDim2.new(0.5, -16, 0.5, -1)},
+			{UDim2.new(0, 10, 0, 2), UDim2.new(0.5, 6, 0.5, -1)}
+		}) do
+			local l = Instance.new("Frame", cg)
+			l.Size = d[1]
+			l.Position = d[2]
+			l.BackgroundColor3 = col
+			l.BorderSizePixel = 0
+		end
+	end
+	if Settings.fullBright then
+		Lighting.Brightness = 2
+		Lighting.ClockTime = 14
+		Lighting.FogEnd = 100000
+		Lighting.GlobalShadows = false
+	end
+	if Settings.infZoom then
+		player.CameraMaxZoomDistance = 9999
+	end
+	workspace.CurrentCamera.FieldOfView = Settings.fov
+end)
+
+print("PHANTOM v7.0 by Mishka | GUI: " .. Settings.toggleGuiKey .. " | ESP: " .. Settings.toggleEspKey)
